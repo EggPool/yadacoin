@@ -6,6 +6,7 @@ python-bitcoinlib
 mnemonic
 eccsnacks
 python-socketio[asyncio_client]
+python-engineio>=3.8.0
 pymongo
 socketIO-client
 motor
