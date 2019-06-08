@@ -209,6 +209,9 @@ class BlockFactory(object):
         try:
             # change target
             max_target = CHAIN.MAX_TARGET
+            if height >= CHAIN.POW_FORK_V2:
+                # don't allow too high a target (high target = low diff) this target is very fine for a single cpu miner
+                max_target = CHAIN.MAX_TARGET_V2
             max_block_time = CHAIN.target_block_time(get_config().network)
             retarget_period = CHAIN.RETARGET_PERIOD  # blocks
             max_seconds = CHAIN.TWO_WEEKS  # seconds
