@@ -21,10 +21,10 @@ from flask import Flask, render_template, request, Response
 from flask_cors import CORS
 from yadacoin import (
     TransactionFactory, Transaction, MissingInputTransactionException,
-    Input, Output, Block, Config, Peers, 
-    Blockchain, BlockChainException, TU, BU, 
-    Mongo, BlockFactory, NotEnoughMoneyException, Peer, 
-    Consensus, PoolPayer, Faucet, Send, Graph, Serve, endpoints, Wallet
+    Input, Output, Block, Config, Peers,
+    Blockchain, BlockChainException, TU, BU,
+    Mongo, BlockFactory, NotEnoughMoneyException, Peer,
+    Consensus, PoolPayer, Faucet, Send, Graph, Serve, endpoints_old, Wallet
 )
 from yadacoin import MiningPool
 from bitcoin.wallet import CBitcoinSecret, P2PKHBitcoinAddress
@@ -40,9 +40,9 @@ def subkey(index):
     ex_key = BIP32Key.fromExtendedKey(qtctl_env["QTCTL_KEY"])
     key = ex_key.ChildKey(int(index))
     child_key = BIP32Key.fromExtendedKey(key.ExtendedKey())
-    private_key = child_key.PrivateKey().encode('hex')
-    public_key = child_key.PublicKey().encode('hex')
-    address = str(P2PKHBitcoinAddress.from_pubkey(public_key.decode('hex')))
+    private_key = child_key.PrivateKey().hex()
+    public_key = child_key.PublicKey().hex()
+    address = str(P2PKHBitcoinAddress.from_pubkey(bytes.fromhex(public_key)))
     
     return {'public_key': public_key, 'index': index, "private_key": private_key, 'address': address}
 
@@ -53,7 +53,7 @@ def generate_some_blocks(keys):
         if existing_input.count() == 0:
             config = Wallet(key)
             index = BU.get_latest_block(config, mongo)['index'] + 1
-            block = BlockFactory(config, mongo, transactions, key.get('public_key'), key.get('private_key'), index=index, version=BU.get_version_for_height(index))
+            block = BlockFactory(transactions, key.get('public_key'), key.get('private_key'), index=index)
             block.block.special_min = True
             block.block.target = 0xffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff
             block.block.nonce = 0
@@ -154,8 +154,6 @@ if __name__ == '__main__':
 
     # this
     transaction = Transaction(
-        config,
-        mongo,
         block_height=BU.get_latest_block(config, mongo)['index'],
         fee=0.01,
         public_key=config.public_key,
@@ -168,7 +166,7 @@ if __name__ == '__main__':
     transaction.transaction_signature = TU.generate_signature(transaction.hash, config.private_key)
     transaction.verify()
     index = BU.get_latest_block(config, mongo)['index'] + 1
-    block = BlockFactory(config, mongo, [transaction], config.public_key, config.private_key, index=index, version=BU.get_version_for_height(index))
+    block = BlockFactory([transaction], config.public_key, config.private_key, index=index)
     block.block.special_min = True
     block.block.target = 0xffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff
     block.block.nonce = 0

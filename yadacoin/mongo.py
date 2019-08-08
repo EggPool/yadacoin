@@ -1,11 +1,25 @@
+import os
 from pymongo import MongoClient, IndexModel, ASCENDING, DESCENDING
+from motor.motor_tornado import MotorClient
+
+from yadacoin.config import get_config
+
 
 class Mongo(object):
-    def __init__(self, config):
-        self.config = config
+
+    def __init__(self):
+        self.config = get_config()
         self.client = MongoClient(self.config.mongodb_host)
         self.db = self.client[self.config.database]
         self.site_db = self.client[self.config.site_database]
+        try:
+            # test connection
+            self.db.yadacoin.find_one()
+        except:
+            if hasattr(self.config, 'mongod_path'):
+                os.system('sudo {} --syslog --fork'.format(self.config.mongod_path))
+            else:
+                os.system('sudo mongod --syslog --fork')
 
         __id = IndexModel([("id", ASCENDING)], name="__id", unique=True)
         __hash = IndexModel([("hash", ASCENDING)], name="__hash")
@@ -40,3 +54,16 @@ class Mongo(object):
             self.db.shares.create_indexes([__address, __index, __hash])
         except:
             pass
+
+        __txn_id = IndexModel([("txn.id", ASCENDING)], name="__txn_id")
+        try:
+            self.db.transactions_by_rid_cache.create_indexes([__txn_id])
+        except:
+            pass
+
+        # TODO: add indexes for peers
+
+        # See https://motor.readthedocs.io/en/stable/tutorial-tornado.html
+        self.async_client = MotorClient(self.config.mongodb_host)
+        self.async_db = self.async_client[self.config.database]
+        self.async_site_db = self.async_client[self.config.site_database]
